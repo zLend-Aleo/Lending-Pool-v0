@@ -2,6 +2,9 @@
 import credits.aleo;
 import stable_usd_v0_0_0.aleo;
 
+// Comments with ATTENTION need fix
+// Comments with TO_DO waiting for implementation
+// Comments with TEMP have to get removed
 program zlend_v0_0_0.aleo {
     const PRICE_PRECISION: u64 = 10000u64; // 4 decimals
     const LTV_NUMERATOR: u64 = 8000u64; // 80%
@@ -47,8 +50,7 @@ program zlend_v0_0_0.aleo {
         input: credits.aleo/credits.record, 
         amount: u64
         ) -> (ZAleo, credits.aleo/credits.record) {
-        assert(input.microcredits >= amount);
-
+        // Balance check happened during transfer
         let balance: credits.aleo/credits = credits.aleo/transfer_private_to_public(
             input, 
             aleo1n2zmmn77wd9k2lruzlvut807t09lt23xsthxepnxtk89vyw70cqq2sdaqw,  // this.address
@@ -59,7 +61,7 @@ program zlend_v0_0_0.aleo {
             owner: self.caller,
             amount: amount,
             id: 0u8
-        }, balance) then finalize(amount);
+        }, balance) then finalize (amount);
     }
 
     finalize deposit_credits_private(amount: u64) {
@@ -67,9 +69,31 @@ program zlend_v0_0_0.aleo {
         total_Aleo.set(0field, prev_total + amount);
     }
 
+    transition deposit_stable_private(
+        input: stable_usd_v0_0_0.aleo/token.record,
+        amount: u64
+        ) -> (ZUSD, stable_usd_v0_0_0.aleo/token.record) {
+        // Balance check during transfer
+        let balance: stable_usd_v0_0_0.aleo/token = stable_usd_v0_0_0.aleo/transfer_private_to_public(
+            input, 
+            aleo1n2zmmn77wd9k2lruzlvut807t09lt23xsthxepnxtk89vyw70cqq2sdaqw, // this.address
+            amount
+        );
+
+        return (ZUSD {
+            owner: self.caller,
+            amount: amount,
+            id: 1u8
+        }, balance) then finalize (amount);
+    }
+
+    finalize deposit_stable_private(amount: u64) {
+        let prev_total: u64 = total_stable.get_or_use(0field, 0u64);
+        total_stable.set(0field, prev_total + amount);
+    }
+
     transition withdraw_credits_private(zAleo: ZAleo, amount: u64) -> (ZAleo, credits.aleo/credits.record) {
         let remaining: u64 = zAleo.amount - amount;
-        assert(remaining >= 0u64);
 
         let balance: ZAleo = ZAleo {
             owner: self.caller,
@@ -90,49 +114,8 @@ program zlend_v0_0_0.aleo {
         total_Aleo.set(0field, prev_total - amount);
     }
 
-    transition add_credits_collateral(zAleo: ZAleo, amount: u64) -> ZAleo {
-        let remaining: u64 = zAleo.amount - amount;
-        assert(remaining >= 0u64);
-
-        return ZAleo {
-            owner: self.caller,
-            amount: remaining,
-            id: 0u8
-        } then finalize (self.caller, amount);
-    }
-
-    finalize add_credits_collateral(caller: address, amount: u64) {
-        let prev_balance: u64 = collateral_Aleo.get_or_use(caller, 0u64);
-        collateral_Aleo.set(caller, prev_balance + amount);
-    }
-
-    transition deposit_stable_private(
-        input: stable_usd_v0_0_0.aleo/token.record,
-        amount: u64
-        ) -> (ZUSD, stable_usd_v0_0_0.aleo/token.record) {
-        assert(input.amount >= amount);
-
-        let balance: stable_usd_v0_0_0.aleo/token = stable_usd_v0_0_0.aleo/transfer_private_to_public(
-            input, 
-            aleo1n2zmmn77wd9k2lruzlvut807t09lt23xsthxepnxtk89vyw70cqq2sdaqw, // this.address
-            amount
-        );
-
-        return (ZUSD {
-            owner: self.caller,
-            amount: amount,
-            id: 1u8
-        }, balance) then finalize(amount);
-    }
-
-    finalize deposit_stable_private(amount: u64) {
-        let prev_total: u64 = total_stable.get_or_use(0field, 0u64);
-        total_stable.set(0field, prev_total + amount);
-    }
-
     transition withdraw_stable_private(zUSD: ZUSD, amount: u64) -> (ZUSD, stable_usd_v0_0_0.aleo/token.record) {
         let remaining: u64 = zUSD.amount - amount;
-        assert(remaining >= 0u64);
 
         let balance: ZUSD = ZUSD {
             owner: self.caller,
@@ -153,9 +136,23 @@ program zlend_v0_0_0.aleo {
         total_stable.set(0field, prev_total - amount);
     }
 
+    transition add_credits_collateral(zAleo: ZAleo, amount: u64) -> ZAleo {
+        let remaining: u64 = zAleo.amount - amount;
+
+        return ZAleo {
+            owner: self.caller,
+            amount: remaining,
+            id: 0u8
+        } then finalize (self.caller, amount);
+    }
+
+    finalize add_credits_collateral(caller: address, amount: u64) {
+        let prev_balance: u64 = collateral_Aleo.get_or_use(caller, 0u64);
+        collateral_Aleo.set(caller, prev_balance + amount);
+    }
+
     transition add_stable_collateral(zUSD: ZUSD, amount: u64) -> ZUSD {
         let remaining: u64 = zUSD.amount - amount;
-        assert(remaining >= 0u64);
 
         return ZUSD {
             owner: self.caller,
@@ -167,6 +164,55 @@ program zlend_v0_0_0.aleo {
     finalize add_stable_collateral(caller: address, amount: u64) {
         let prev_balance: u64 = collateral_stable.get_or_use(caller, 0u64);
         collateral_stable.set(caller, prev_balance + amount);
+    }
+
+    // ATTENTION: To check if this fails at finalize does cross-program call still get through?
+    transition withdraw_collateral_credits(
+        amount: u64,
+        borrowed_aleo_: u64,
+        collateral_Aleo_: u64,
+        collateral_stable_: u64,
+        price_Aleo: u64,            // Price format in 4 decimals, e.g. 100000 == $10.0000
+        price_stable: u64           // Price format in 4 decimals, e.g. 100000 == $10.0000
+    ) -> credits.aleo/credits.record {
+        let usd_price_Aleo: u64 = collateral_Aleo_ * price_Aleo / PRICE_PRECISION;
+        let usd_price_stable: u64 = collateral_stable_ * price_stable / PRICE_PRECISION;
+        let usd_price_total: u64 = usd_price_Aleo + usd_price_stable;
+        let usd_price_amount: u64 = amount * price_Aleo / PRICE_PRECISION;
+        let usd_price_borrowed: u64 = borrowed_aleo_ * price_Aleo / PRICE_PRECISION;
+        let new_ltv: u64 = (usd_price_total - usd_price_amount) * LTV_NUMERATOR / LTV_DENOMINATOR;
+
+        // Ensure health factor is still safe after withdrawal
+        assert(usd_price_borrowed <= new_ltv);
+
+        let r: credits.aleo/credits = credits.aleo/transfer_public_to_private(self.caller, amount);
+
+        return r then finalize(
+            amount,
+            self.caller,
+            borrowed_aleo_,
+            collateral_Aleo_,
+            collateral_stable_,
+            price_Aleo,
+            price_stable 
+        );
+    }
+
+    finalize withdraw_collateral_credits(
+        amount: u64,
+        caller: address,
+        borrowed_aleo_: u64,
+        collateral_Aleo_: u64,
+        collateral_stable_: u64,
+        price_Aleo: u64,
+        price_stable: u64 
+        ) {
+        assert_eq(borrowed_aleo_, borrowed_Aleo.get_or_use(caller, 0u64));
+        assert_eq(collateral_Aleo_, collateral_Aleo.get(caller));
+        assert_eq(collateral_stable_, collateral_stable.get_or_use(caller, 0u64));
+        // TO_DO: assert_eq(price, oracle.aleo/price.get(asset)); 
+
+        collateral_Aleo.set(caller, collateral_Aleo.get(caller) - amount); // Fails if underflow
     }
 
     transition borrow_credits(
@@ -199,7 +245,7 @@ program zlend_v0_0_0.aleo {
             amount
         );
 
-        return (debt, borrow) then finalize(
+        return (debt, borrow) then finalize (
             amount,
             self.caller,
             collateral_Aleo_,
@@ -217,9 +263,9 @@ program zlend_v0_0_0.aleo {
         price_Aleo: u64,
         price_stable: u64 
     ) {
-        assert_eq(collateral_Aleo_, collateral_Aleo.get(caller));
-        assert_eq(collateral_stable_, collateral_stable.get(caller));
-        // assert_eq(price, oracle.aleo/price.get(asset)); 
+        assert_eq(collateral_Aleo_, collateral_Aleo.get_or_use(caller, 0u64));
+        assert_eq(collateral_stable_, collateral_stable.get_or_use(caller, 0u64));
+        // TO_DO: assert_eq(price, oracle.aleo/price.get(asset)); 
 
         borrowed_Aleo.set(caller, amount + borrowed_Aleo.get_or_use(caller, 0u64));
         total_borrowed_Aleo.set(0field, amount + total_borrowed_Aleo.get_or_use(0field, 0u64));
@@ -246,7 +292,7 @@ program zlend_v0_0_0.aleo {
             amount
         );
 
-        return (debt_balance, balance) then finalize(
+        return (debt_balance, balance) then finalize (
             amount,
             self.caller,
             borrowed_Aleo_

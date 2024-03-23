@@ -70,14 +70,12 @@ function print_address:
 function deposit_credits_private:
     input r0 as credits.aleo/credits.record;
     input r1 as u64.private;
-    gte r0.microcredits r1 into r2;
-    assert.eq r2 true;
-    call credits.aleo/transfer_private_to_public r0 aleo1n2zmmn77wd9k2lruzlvut807t09lt23xsthxepnxtk89vyw70cqq2sdaqw r1 into r3 r4;
-    cast self.caller r1 0u8 into r5 as ZAleo.record;
-    async deposit_credits_private r4 r1 into r6;
-    output r5 as ZAleo.record;
-    output r3 as credits.aleo/credits.record;
-    output r6 as zlend_v0_0_0.aleo/deposit_credits_private.future;
+    call credits.aleo/transfer_private_to_public r0 aleo1n2zmmn77wd9k2lruzlvut807t09lt23xsthxepnxtk89vyw70cqq2sdaqw r1 into r2 r3;
+    cast self.caller r1 0u8 into r4 as ZAleo.record;
+    async deposit_credits_private r3 r1 into r5;
+    output r4 as ZAleo.record;
+    output r2 as credits.aleo/credits.record;
+    output r5 as zlend_v0_0_0.aleo/deposit_credits_private.future;
 
 finalize deposit_credits_private:
     input r0 as credits.aleo/transfer_private_to_public.future;
@@ -88,58 +86,15 @@ finalize deposit_credits_private:
     set r3 into total_Aleo[0field];
 
 
-function withdraw_credits_private:
-    input r0 as ZAleo.record;
-    input r1 as u64.private;
-    sub r0.amount r1 into r2;
-    gte r2 0u64 into r3;
-    assert.eq r3 true;
-    cast self.caller r2 0u8 into r4 as ZAleo.record;
-    call credits.aleo/transfer_public_to_private self.caller r1 into r5 r6;
-    async withdraw_credits_private r6 r1 into r7;
-    output r4 as ZAleo.record;
-    output r5 as credits.aleo/credits.record;
-    output r7 as zlend_v0_0_0.aleo/withdraw_credits_private.future;
-
-finalize withdraw_credits_private:
-    input r0 as credits.aleo/transfer_public_to_private.future;
-    input r1 as u64.public;
-    await r0;
-    get total_Aleo[0field] into r2;
-    sub r2 r1 into r3;
-    set r3 into total_Aleo[0field];
-
-
-function add_credits_collateral:
-    input r0 as ZAleo.record;
-    input r1 as u64.private;
-    sub r0.amount r1 into r2;
-    gte r2 0u64 into r3;
-    assert.eq r3 true;
-    cast self.caller r2 0u8 into r4 as ZAleo.record;
-    async add_credits_collateral self.caller r1 into r5;
-    output r4 as ZAleo.record;
-    output r5 as zlend_v0_0_0.aleo/add_credits_collateral.future;
-
-finalize add_credits_collateral:
-    input r0 as address.public;
-    input r1 as u64.public;
-    get.or_use collateral_Aleo[r0] 0u64 into r2;
-    add r2 r1 into r3;
-    set r3 into collateral_Aleo[r0];
-
-
 function deposit_stable_private:
     input r0 as stable_usd_v0_0_0.aleo/token.record;
     input r1 as u64.private;
-    gte r0.amount r1 into r2;
-    assert.eq r2 true;
-    call stable_usd_v0_0_0.aleo/transfer_private_to_public r0 aleo1n2zmmn77wd9k2lruzlvut807t09lt23xsthxepnxtk89vyw70cqq2sdaqw r1 into r3 r4;
-    cast self.caller r1 1u8 into r5 as ZUSD.record;
-    async deposit_stable_private r4 r1 into r6;
-    output r5 as ZUSD.record;
-    output r3 as stable_usd_v0_0_0.aleo/token.record;
-    output r6 as zlend_v0_0_0.aleo/deposit_stable_private.future;
+    call stable_usd_v0_0_0.aleo/transfer_private_to_public r0 aleo1n2zmmn77wd9k2lruzlvut807t09lt23xsthxepnxtk89vyw70cqq2sdaqw r1 into r2 r3;
+    cast self.caller r1 1u8 into r4 as ZUSD.record;
+    async deposit_stable_private r3 r1 into r5;
+    output r4 as ZUSD.record;
+    output r2 as stable_usd_v0_0_0.aleo/token.record;
+    output r5 as zlend_v0_0_0.aleo/deposit_stable_private.future;
 
 finalize deposit_stable_private:
     input r0 as stable_usd_v0_0_0.aleo/transfer_private_to_public.future;
@@ -150,18 +105,36 @@ finalize deposit_stable_private:
     set r3 into total_stable[0field];
 
 
+function withdraw_credits_private:
+    input r0 as ZAleo.record;
+    input r1 as u64.private;
+    sub r0.amount r1 into r2;
+    cast self.caller r2 0u8 into r3 as ZAleo.record;
+    call credits.aleo/transfer_public_to_private self.caller r1 into r4 r5;
+    async withdraw_credits_private r5 r1 into r6;
+    output r3 as ZAleo.record;
+    output r4 as credits.aleo/credits.record;
+    output r6 as zlend_v0_0_0.aleo/withdraw_credits_private.future;
+
+finalize withdraw_credits_private:
+    input r0 as credits.aleo/transfer_public_to_private.future;
+    input r1 as u64.public;
+    await r0;
+    get total_Aleo[0field] into r2;
+    sub r2 r1 into r3;
+    set r3 into total_Aleo[0field];
+
+
 function withdraw_stable_private:
     input r0 as ZUSD.record;
     input r1 as u64.private;
     sub r0.amount r1 into r2;
-    gte r2 0u64 into r3;
-    assert.eq r3 true;
-    cast self.caller r2 1u8 into r4 as ZUSD.record;
-    call stable_usd_v0_0_0.aleo/transfer_public_to_private self.caller r1 into r5 r6;
-    async withdraw_stable_private r6 r1 into r7;
-    output r4 as ZUSD.record;
-    output r5 as stable_usd_v0_0_0.aleo/token.record;
-    output r7 as zlend_v0_0_0.aleo/withdraw_stable_private.future;
+    cast self.caller r2 1u8 into r3 as ZUSD.record;
+    call stable_usd_v0_0_0.aleo/transfer_public_to_private self.caller r1 into r4 r5;
+    async withdraw_stable_private r5 r1 into r6;
+    output r3 as ZUSD.record;
+    output r4 as stable_usd_v0_0_0.aleo/token.record;
+    output r6 as zlend_v0_0_0.aleo/withdraw_stable_private.future;
 
 finalize withdraw_stable_private:
     input r0 as stable_usd_v0_0_0.aleo/transfer_public_to_private.future;
@@ -172,16 +145,31 @@ finalize withdraw_stable_private:
     set r3 into total_stable[0field];
 
 
+function add_credits_collateral:
+    input r0 as ZAleo.record;
+    input r1 as u64.private;
+    sub r0.amount r1 into r2;
+    cast self.caller r2 0u8 into r3 as ZAleo.record;
+    async add_credits_collateral self.caller r1 into r4;
+    output r3 as ZAleo.record;
+    output r4 as zlend_v0_0_0.aleo/add_credits_collateral.future;
+
+finalize add_credits_collateral:
+    input r0 as address.public;
+    input r1 as u64.public;
+    get.or_use collateral_Aleo[r0] 0u64 into r2;
+    add r2 r1 into r3;
+    set r3 into collateral_Aleo[r0];
+
+
 function add_stable_collateral:
     input r0 as ZUSD.record;
     input r1 as u64.private;
     sub r0.amount r1 into r2;
-    gte r2 0u64 into r3;
-    assert.eq r3 true;
-    cast self.caller r2 1u8 into r4 as ZUSD.record;
-    async add_stable_collateral self.caller r1 into r5;
-    output r4 as ZUSD.record;
-    output r5 as zlend_v0_0_0.aleo/add_stable_collateral.future;
+    cast self.caller r2 1u8 into r3 as ZUSD.record;
+    async add_stable_collateral self.caller r1 into r4;
+    output r3 as ZUSD.record;
+    output r4 as zlend_v0_0_0.aleo/add_stable_collateral.future;
 
 finalize add_stable_collateral:
     input r0 as address.public;
@@ -189,6 +177,53 @@ finalize add_stable_collateral:
     get.or_use collateral_stable[r0] 0u64 into r2;
     add r2 r1 into r3;
     set r3 into collateral_stable[r0];
+
+
+function withdraw_collateral_credits:
+    input r0 as u64.private;
+    input r1 as u64.private;
+    input r2 as u64.private;
+    input r3 as u64.private;
+    input r4 as u64.private;
+    input r5 as u64.private;
+    mul r2 r4 into r6;
+    div r6 10000u64 into r7;
+    mul r3 r5 into r8;
+    div r8 10000u64 into r9;
+    add r7 r9 into r10;
+    mul r0 r4 into r11;
+    div r11 10000u64 into r12;
+    mul r1 r4 into r13;
+    div r13 10000u64 into r14;
+    sub r10 r12 into r15;
+    mul r15 8000u64 into r16;
+    div r16 10000u64 into r17;
+    lte r14 r17 into r18;
+    assert.eq r18 true;
+    call credits.aleo/transfer_public_to_private self.caller r0 into r19 r20;
+    async withdraw_collateral_credits r20 r0 self.caller r1 r2 r3 r4 r5 into r21;
+    output r19 as credits.aleo/credits.record;
+    output r21 as zlend_v0_0_0.aleo/withdraw_collateral_credits.future;
+
+finalize withdraw_collateral_credits:
+    input r0 as credits.aleo/transfer_public_to_private.future;
+    input r1 as u64.public;
+    input r2 as address.public;
+    input r3 as u64.public;
+    input r4 as u64.public;
+    input r5 as u64.public;
+    input r6 as u64.public;
+    input r7 as u64.public;
+    await r0;
+    get.or_use borrowed_Aleo[r2] 0u64 into r8;
+    assert.eq r3 r8;
+    get collateral_Aleo[r2] into r9;
+    assert.eq r4 r9;
+    get.or_use collateral_stable[r2] 0u64 into r10;
+    assert.eq r5 r10;
+    get collateral_Aleo[r2] into r11;
+    sub r11 r1 into r12;
+    set r12 into collateral_Aleo[r2];
 
 
 function borrow_credits:
@@ -226,9 +261,9 @@ finalize borrow_credits:
     input r5 as u64.public;
     input r6 as u64.public;
     await r0;
-    get collateral_Aleo[r2] into r7;
+    get.or_use collateral_Aleo[r2] 0u64 into r7;
     assert.eq r3 r7;
-    get collateral_stable[r2] into r8;
+    get.or_use collateral_stable[r2] 0u64 into r8;
     assert.eq r4 r8;
     get.or_use borrowed_Aleo[r2] 0u64 into r9;
     add r1 r9 into r10;
