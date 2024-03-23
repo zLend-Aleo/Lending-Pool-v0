@@ -1,4 +1,4 @@
-# zlend_v000.aleo
+# stablecoin.aleo
 
 ## Build Guide
 
