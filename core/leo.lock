@@ -1,8 +1,8 @@
 [[package]]
 name = "credits.aleo"
-network = "testnet3"
-location = "network"
-checksum = "2ac86d83bca4fbf2c021660875ea1e5b4e65c7a192d9bc020ab02a0f32c86f0d"
+location = "local"
+path = "/Users/zklim/Aleo/ZLend/program_v0/core/../credits"
+checksum = "3bff146204eb1755a3b81dda71db8331c451dd737c8cabb9b3d649eacd045ed8"
 dependencies = []
 
 [[package]]

@@ -4,9 +4,6 @@ program zlend_v0_0_0.aleo;
 
 
 
-
-
-
 record ZAleo:
     owner as address.private;
     amount as u64.private;

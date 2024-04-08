@@ -5,8 +5,8 @@
     "license": "MIT",
     "dependencies": [{
         "name": "credits.aleo",
-        "location": "network",
-        "network": "testnet3"
+        "location": "local",
+        "path": "../credits"
     },
     {
         "name": "stable_usd_v0_0_0.aleo",
