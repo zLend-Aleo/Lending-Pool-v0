@@ -7,6 +7,18 @@ program credits.aleo {
 
     mapping account: address => u64;
 
+    transition transfer_public(public to: address, public amount: u64) {
+        return then finalize(self.caller, to, amount);
+    }
+
+    finalize transfer_public(sender: address, to: address, amount: u64) {
+        let prev_sender: u64 = account.get(sender);
+        let prev_to: u64 = account.get_or_use(to, 0u64);
+
+        account.set(sender, prev_sender - amount);
+        account.set(sender, prev_to + amount);
+    }
+
     // The function `transfer_private_to_public` turns a specified token amount from a token record into public tokens for the specified receiver.
     // This function preserves privacy for the sender's record, however it publicly reveals the token receiver and the token amount.
     transition transfer_private_to_public(sender: credits, public receiver: address, public amount: u64) -> credits {

@@ -2,7 +2,7 @@
 name = "credits.aleo"
 location = "local"
 path = "/Users/zklim/Aleo/ZLend/program_v0/core/../credits"
-checksum = "3bff146204eb1755a3b81dda71db8331c451dd737c8cabb9b3d649eacd045ed8"
+checksum = "ec877191a17e6e3ec1e8e158352cb2d1cc97be91802b954c30d341b30fff74b8"
 dependencies = []
 
 [[package]]
