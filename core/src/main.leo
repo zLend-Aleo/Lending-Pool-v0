@@ -7,12 +7,24 @@ import stable_usd_v0_0_0.aleo;
 // Comments with TEMP have to get removed
 program zlend_v0_0_0.aleo {
     const PRICE_PRECISION: u64 = 10000u64; // 4 decimals
+
     const LTV_NUMERATOR: u64 = 8000u64; // 80%
     const LTV_DENOMINATOR: u64 = 10000u64; // 80%
+
     const PRICE_ALEO: u64 = 20000u64; // Price format in 4 decimals, 2e4 / 20000 == $2.0000
     const PRICE_STABLE: u64 = 10000u64; // Price format in 4 decimals, 1e4 / 10000 == $1.0000
-    const BLOCKS_PER_YEAR: u128 = 6307200u128; // Assume 5 sec per block
-    const RATE_PRECISION: u128 = 1_000_000_000_000_000_000u128; // 18 decimals
+
+    const SECONDS_PER_BLOCK: u128 = 5u128; // Assume 5 sec per block
+    const SECONDS_PER_YEAR: u128 = 31536000u128; // 60 * 60 * 24 * 365
+
+    const RATE_PRECISION: u128 = 100_000_000_000u128; // 100% == 100e9, large enough for binomial approximation
+
+    const ALEO_CREDITS_INDEX: field = 1field;
+    const STABLECOIN_INDEX: field = 2field;
+
+    const OPTIMAL_USAGE_PRECISION: u128 = 10000u128; // 100% optimal liquidity usage rate
+    const OPTIMAL_USAGE_RATIO: u128 = 9000u128; // 90% optimal liquidity usage rate
+    const MAX_EXCESS_USAGE_RATIO: u128 = 1000u128; // OPTIMAL_USAGE_PRECISION - OPTIMAL_USAGE_RATIO;
 
     // Always 0field key as global variable
     mapping total_aleo: field => u64;
@@ -26,6 +38,17 @@ program zlend_v0_0_0.aleo {
     // Individual borrow tracking
     mapping borrowed_aleo: address => u64;
     mapping borrowed_stable: address => u64;
+    // Indexes
+    // 1field is Aleo credits
+    // 2field is stablecoin
+    mapping cumulative_liquidity_index: field => u128;
+    mapping cumulative_borrow_index: field => u128;
+    // Interest rate slopes
+    // Slope 1 for < optimal usage rate
+    // Slope 2 for > optimal usage rate
+    // Always 0field key
+    mapping interest_rate_slope1: field => u128;
+    mapping interest_rate_slope2: field => u128;
 
     record ZALEO {
         owner: address,
@@ -283,33 +306,61 @@ program zlend_v0_0_0.aleo {
     // Internal functions
     // ========================================
 
+    transition calculate_interest(
+        slope_1: u128,
+        slope_2: u128,
+        total_liquidity: u128,
+        total_borrowing: u128
+    ) -> u128 {
+        let util_rate: u128 = calculate_utilisation_rate(0u128, 0u128, total_liquidity, 0u128, 0u128, total_borrowing);
+        if (util_rate > OPTIMAL_USAGE_RATIO) {
+            let excess: u128 = (util_rate - OPTIMAL_USAGE_RATIO) * OPTIMAL_USAGE_PRECISION / MAX_EXCESS_USAGE_RATIO;
+            return slope_1 + (slope_2 * excess / OPTIMAL_USAGE_PRECISION);
+        }
+        return 0u128;
+    }
+
+    // Calculate current utilisation level based on liquidity and borrowing
+    function calculate_utilisation_rate(
+        liquidity_added: u128,
+        liquidity_taken: u128,
+        total_liquidity: u128,
+        borrowing_added: u128,
+        borrowing_reduced: u128,
+        total_borrowing: u128
+    ) -> u128 {
+        let liquidity: u128 = total_liquidity + liquidity_added - liquidity_taken;
+        let borrowing: u128 = total_borrowing + borrowing_added - borrowing_reduced;
+        let optimal_rate: u128 = borrowing * OPTIMAL_USAGE_PRECISION / liquidity;
+        return optimal_rate;
+    }
+
     // Compounded interest rate calculation is performed using a binomial approximation:
     //
     // (1+x)^n = 1+n*x+[n/2*(n-1)]*x^2+[n/6*(n-1)*(n-2)*x^3...
     //
-    // The approximation slightly underpays liquidity providers and undercharges borrowers, with the advantage of great gas cost reductions
-    // The whitepaper of Aave V2 contains reference to the approximation and a table showing the margin of error per different time periods
-    //
-    // ATTENTION: Overflow when interest rate is equal or more than 1000% which is 100e18
     function calculate_compounded_interest(
         rate: u128, // 18 decimals precision, 1% == 1_000_000_000_000_000_000 / 1e18
         lastBlock: u128,
         currentBlock: u128
     ) -> u128 {
-        let exp: u128 = currentBlock - lastBlock;
+        let exp: u128 = (currentBlock - lastBlock) * SECONDS_PER_BLOCK;
         if (exp == 0u128) {
             return RATE_PRECISION;
         }
         let exp_minus_one: u128 = exp - 1u128;
         let exp_minus_two: u128 = exp > 2u128 ? exp - 2u128 : 0u128;
 
-        let base_power_two: u128 = rate * rate / RATE_PRECISION / (BLOCKS_PER_YEAR * BLOCKS_PER_YEAR);
-        let base_power_three: u128 = rate * base_power_two / RATE_PRECISION / BLOCKS_PER_YEAR;
+        let numerator_two: u128 = rate * rate / RATE_PRECISION * exp * exp_minus_one;
+        let numerator_three: u128 = rate * rate * rate / RATE_PRECISION / RATE_PRECISION * exp * exp_minus_one * exp_minus_two;
 
-        let secondTerm: u128 = exp * exp_minus_one * base_power_two / 2u128;
-        let thirdTerm: u128 = exp * exp_minus_one * exp_minus_two * base_power_three / 6u128;
+        let denominator_two: u128 = 2u128 * SECONDS_PER_YEAR * SECONDS_PER_YEAR;
+        let denominator_three: u128 = 6u128 * SECONDS_PER_YEAR * SECONDS_PER_YEAR * SECONDS_PER_YEAR;
 
-        return RATE_PRECISION + (rate * exp) / BLOCKS_PER_YEAR + secondTerm + thirdTerm;
+        let secondTerm: u128 = numerator_two / denominator_two;
+        let thirdTerm: u128 = numerator_three / denominator_three;
+
+        return RATE_PRECISION + (rate * exp) / SECONDS_PER_YEAR + secondTerm + thirdTerm;
     }
 
     // Interest accumulated calculated using linear rate formula
@@ -318,8 +369,8 @@ program zlend_v0_0_0.aleo {
         lastBlock: u128,
         currentBlock: u128
     ) -> u128 {
-        let res: u128 = rate * (currentBlock - lastBlock);
-        res = res / BLOCKS_PER_YEAR;
+        let res: u128 = rate * ((currentBlock - lastBlock) * SECONDS_PER_BLOCK);
+        res = res / SECONDS_PER_YEAR;
 
         return RATE_PRECISION + res;
     }

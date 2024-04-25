@@ -5,8 +5,8 @@ program zlend_v0_0_0.aleo;
 
 
 record ZALEO:
-    owner as address.public;
-    amount as u64.public;
+    owner as address.private;
+    amount as u64.private;
 
 record ZUSD:
     owner as address.private;
@@ -51,6 +51,26 @@ mapping borrowed_aleo:
 mapping borrowed_stable:
 	key as address.public;
 	value as u64.public;
+
+
+mapping cumulative_liquidity_index:
+	key as field.public;
+	value as u128.public;
+
+
+mapping cumulative_borrow_index:
+	key as field.public;
+	value as u128.public;
+
+
+mapping interest_rate_slope1:
+	key as field.public;
+	value as u128.public;
+
+
+mapping interest_rate_slope2:
+	key as field.public;
+	value as u128.public;
 
 function print_address:
     input r0 as address.private;
@@ -323,37 +343,77 @@ finalize repay_stable:
     set r8 into total_stable[0field];
 
 
+closure calculate_utilisation_rate:
+    input r0 as u128;
+    input r1 as u128;
+    input r2 as u128;
+    input r3 as u128;
+    input r4 as u128;
+    input r5 as u128;
+    add r2 r0 into r6;
+    sub r6 r1 into r7;
+    add r5 r3 into r8;
+    sub r8 r4 into r9;
+    mul r9 10000u128 into r10;
+    div r10 r7 into r11;
+    output r11 as u128;
+
+
+function calculate_interest:
+    input r0 as u128.private;
+    input r1 as u128.private;
+    input r2 as u128.private;
+    input r3 as u128.private;
+    call calculate_utilisation_rate 0u128 0u128 r2 0u128 0u128 r3 into r4;
+    gt r4 9000u128 into r5;
+    sub r4 9000u128 into r6;
+    mul r6 10000u128 into r7;
+    div r7 1000u128 into r8;
+    mul r1 r8 into r9;
+    div r9 10000u128 into r10;
+    add r0 r10 into r11;
+    sub 9000u128 r4 into r12;
+    ternary r5 r4 r12 into r13;
+    ternary r5 r11 0u128 into r14;
+    output r14 as u128.private;
+
+
 closure calculate_compounded_interest:
     input r0 as u128;
     input r1 as u128;
     input r2 as u128;
     sub r2 r1 into r3;
-    is.eq r3 0u128 into r4;
-    sub r3 1u128 into r5;
-    gt r3 2u128 into r6;
-    sub r3 2u128 into r7;
-    ternary r6 r7 0u128 into r8;
-    mul r0 r0 into r9;
-    div r9 1_000_000_000_000_000_000u128 into r10;
-    mul 6307200u128 6307200u128 into r11;
-    div r10 r11 into r12;
-    mul r0 r12 into r13;
-    div r13 1_000_000_000_000_000_000u128 into r14;
-    div r14 6307200u128 into r15;
-    mul r3 r5 into r16;
-    mul r16 r12 into r17;
-    div r17 2u128 into r18;
-    mul r3 r5 into r19;
-    mul r19 r8 into r20;
-    mul r20 r15 into r21;
-    div r21 6u128 into r22;
-    mul r0 r3 into r23;
-    div r23 6307200u128 into r24;
-    add 1_000_000_000_000_000_000u128 r24 into r25;
-    add r25 r18 into r26;
-    add r26 r22 into r27;
-    ternary r4 1_000_000_000_000_000_000u128 r27 into r28;
-    output r28 as u128;
+    mul r3 5u128 into r4;
+    is.eq r4 0u128 into r5;
+    sub r4 1u128 into r6;
+    gt r4 2u128 into r7;
+    sub r4 2u128 into r8;
+    ternary r7 r8 0u128 into r9;
+    mul r0 r0 into r10;
+    div r10 100_000_000_000u128 into r11;
+    mul r11 r4 into r12;
+    mul r12 r6 into r13;
+    mul r0 r0 into r14;
+    mul r14 r0 into r15;
+    div r15 100_000_000_000u128 into r16;
+    div r16 100_000_000_000u128 into r17;
+    mul r17 r4 into r18;
+    mul r18 r6 into r19;
+    mul r19 r9 into r20;
+    mul 2u128 31536000u128 into r21;
+    mul r21 31536000u128 into r22;
+    mul 6u128 31536000u128 into r23;
+    mul r23 31536000u128 into r24;
+    mul r24 31536000u128 into r25;
+    div r13 r22 into r26;
+    div r20 r25 into r27;
+    mul r0 r4 into r28;
+    div r28 31536000u128 into r29;
+    add 100_000_000_000u128 r29 into r30;
+    add r30 r26 into r31;
+    add r31 r27 into r32;
+    ternary r5 100_000_000_000u128 r32 into r33;
+    output r33 as u128;
 
 
 closure calculate_linear_interest:
@@ -361,7 +421,8 @@ closure calculate_linear_interest:
     input r1 as u128;
     input r2 as u128;
     sub r2 r1 into r3;
-    mul r0 r3 into r4;
-    div r4 6307200u128 into r5;
-    add 1_000_000_000_000_000_000u128 r5 into r6;
-    output r6 as u128;
+    mul r3 5u128 into r4;
+    mul r0 r4 into r5;
+    div r5 31536000u128 into r6;
+    add 100_000_000_000u128 r6 into r7;
+    output r7 as u128;
