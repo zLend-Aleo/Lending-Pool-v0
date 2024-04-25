@@ -314,8 +314,8 @@ program zlend_v0_0_0.aleo {
     ) -> u128 {
         let util_rate: u128 = calculate_utilisation_rate(0u128, 0u128, total_liquidity, 0u128, 0u128, total_borrowing);
         if (util_rate > OPTIMAL_USAGE_RATIO) {
-            let excess: u128 = (util_rate - OPTIMAL_USAGE_RATIO) * OPTIMAL_USAGE_PRECISION / MAX_EXCESS_USAGE_RATIO;
-            return slope_1 + (slope_2 * excess / OPTIMAL_USAGE_PRECISION);
+            let excess: u128 = ((util_rate.sub_wrapped(OPTIMAL_USAGE_RATIO)).mul_wrapped(OPTIMAL_USAGE_PRECISION)).div_wrapped(MAX_EXCESS_USAGE_RATIO);
+            return slope_1 + (slope_2.mul_wrapped(excess)).div_wrapped(OPTIMAL_USAGE_PRECISION);
         }
         return 0u128;
     }

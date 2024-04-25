@@ -366,16 +366,14 @@ function calculate_interest:
     input r3 as u128.private;
     call calculate_utilisation_rate 0u128 0u128 r2 0u128 0u128 r3 into r4;
     gt r4 9000u128 into r5;
-    sub r4 9000u128 into r6;
-    mul r6 10000u128 into r7;
-    div r7 1000u128 into r8;
-    mul r1 r8 into r9;
-    div r9 10000u128 into r10;
+    sub.w r4 9000u128 into r6;
+    mul.w r6 10000u128 into r7;
+    div.w r7 1000u128 into r8;
+    mul.w r1 r8 into r9;
+    div.w r9 10000u128 into r10;
     add r0 r10 into r11;
-    sub 9000u128 r4 into r12;
-    ternary r5 r4 r12 into r13;
-    ternary r5 r11 0u128 into r14;
-    output r14 as u128.private;
+    ternary r5 r11 0u128 into r12;
+    output r12 as u128.private;
 
 
 closure calculate_compounded_interest:
