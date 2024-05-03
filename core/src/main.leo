@@ -17,6 +17,7 @@ program zlend_v0_0_0.aleo {
     const SECONDS_PER_BLOCK: u128 = 5u128; // Assume 5 sec per block
     const SECONDS_PER_YEAR: u128 = 31536000u128; // 60 * 60 * 24 * 365
 
+    const RESERVE_FACTOR: u128 = 2000u128; // 20% reserve factor
     const RATE_PRECISION: u128 = 100_000_000_000u128; // 100% == 100e9, large enough for binomial approximation
 
     const ALEO_CREDITS_INDEX: field = 1field;
@@ -306,22 +307,43 @@ program zlend_v0_0_0.aleo {
     // Internal functions
     // ========================================
 
+    // Calculate interest rate based on utilisation rate
+    // All rate should follow same precision i.e. 9 decimals
     transition calculate_interest(
         slope_1: u128,
         slope_2: u128,
+        base_rate: u128,
+        liquidity_added: u128,
+        liquidity_taken: u128,
         total_liquidity: u128,
+        borrowing_added: u128,
+        borrowing_reduced: u128,
         total_borrowing: u128
     ) -> u128 {
-        let util_rate: u128 = calculate_utilisation_rate(0u128, 0u128, total_liquidity, 0u128, 0u128, total_borrowing);
+        let util_rate: u128 = calculate_utilisation_rate(
+            liquidity_added, 
+            liquidity_taken, 
+            total_liquidity, 
+            borrowing_added, 
+            borrowing_reduced, 
+            total_borrowing
+        );
+        // return util_rate;
+        // 100% of slope_1 + slope_2 * excess usage if utilisation rate is above optimal usage rate
+        // else slope_1 * utilisation rate
+        //
+        // @dev Must use wrapped because of overflow, code still run even `if` condition is not satisfied
         if (util_rate > OPTIMAL_USAGE_RATIO) {
             let excess: u128 = ((util_rate.sub_wrapped(OPTIMAL_USAGE_RATIO)).mul_wrapped(OPTIMAL_USAGE_PRECISION)).div_wrapped(MAX_EXCESS_USAGE_RATIO);
-            return slope_1 + (slope_2.mul_wrapped(excess)).div_wrapped(OPTIMAL_USAGE_PRECISION);
+            return base_rate + slope_1 + (slope_2.mul_wrapped(excess)).div_wrapped(OPTIMAL_USAGE_PRECISION);
+        } else {
+            let util_over_optimal_rate: u128 = util_rate.mul_wrapped(OPTIMAL_USAGE_PRECISION).div_wrapped(OPTIMAL_USAGE_RATIO);
+            return (base_rate + slope_1.mul_wrapped(util_over_optimal_rate).div_wrapped(OPTIMAL_USAGE_PRECISION));
         }
-        return 0u128;
     }
 
     // Calculate current utilisation level based on liquidity and borrowing
-    function calculate_utilisation_rate(
+    inline calculate_utilisation_rate(
         liquidity_added: u128,
         liquidity_taken: u128,
         total_liquidity: u128,
@@ -331,16 +353,16 @@ program zlend_v0_0_0.aleo {
     ) -> u128 {
         let liquidity: u128 = total_liquidity + liquidity_added - liquidity_taken;
         let borrowing: u128 = total_borrowing + borrowing_added - borrowing_reduced;
-        let optimal_rate: u128 = borrowing * OPTIMAL_USAGE_PRECISION / liquidity;
-        return optimal_rate;
+        let util_rate: u128 = borrowing * OPTIMAL_USAGE_PRECISION / liquidity;
+        return util_rate;
     }
 
     // Compounded interest rate calculation is performed using a binomial approximation:
     //
     // (1+x)^n = 1+n*x+[n/2*(n-1)]*x^2+[n/6*(n-1)*(n-2)*x^3...
-    //
-    function calculate_compounded_interest(
-        rate: u128, // 18 decimals precision, 1% == 1_000_000_000_000_000_000 / 1e18
+    // 
+    transition calculate_compounded_interest(
+        rate: u128, // 9 decimals precision, 1% == 1_000_000_000 / 1e9
         lastBlock: u128,
         currentBlock: u128
     ) -> u128 {
@@ -364,8 +386,8 @@ program zlend_v0_0_0.aleo {
     }
 
     // Interest accumulated calculated using linear rate formula
-    function calculate_linear_interest(
-        rate: u128, // 18 decimals precision, 1% == 1_000_000_000_000_000_000 / 1e18
+    transition calculate_linear_interest(
+        rate: u128, // 9 decimals precision, 1% == 1_000_000_000 / 1e9
         lastBlock: u128,
         currentBlock: u128
     ) -> u128 {

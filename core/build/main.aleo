@@ -343,20 +343,6 @@ finalize repay_stable:
     set r8 into total_stable[0field];
 
 
-closure calculate_utilisation_rate:
-    input r0 as u128;
-    input r1 as u128;
-    input r2 as u128;
-    input r3 as u128;
-    input r4 as u128;
-    input r5 as u128;
-    add r2 r0 into r6;
-    sub r6 r1 into r7;
-    add r5 r3 into r8;
-    sub r8 r4 into r9;
-    mul r9 10000u128 into r10;
-    div r10 r7 into r11;
-    output r11 as u128;
 
 
 function calculate_interest:
@@ -364,22 +350,38 @@ function calculate_interest:
     input r1 as u128.private;
     input r2 as u128.private;
     input r3 as u128.private;
-    call calculate_utilisation_rate 0u128 0u128 r2 0u128 0u128 r3 into r4;
-    gt r4 9000u128 into r5;
-    sub.w r4 9000u128 into r6;
-    mul.w r6 10000u128 into r7;
-    div.w r7 1000u128 into r8;
-    mul.w r1 r8 into r9;
-    div.w r9 10000u128 into r10;
-    add r0 r10 into r11;
-    ternary r5 r11 0u128 into r12;
-    output r12 as u128.private;
+    input r4 as u128.private;
+    input r5 as u128.private;
+    input r6 as u128.private;
+    input r7 as u128.private;
+    input r8 as u128.private;
+    add r5 r3 into r9;
+    sub r9 r4 into r10;
+    add r8 r6 into r11;
+    sub r11 r7 into r12;
+    mul r12 10000u128 into r13;
+    div r13 r10 into r14;
+    gt r14 9000u128 into r15;
+    sub.w r14 9000u128 into r16;
+    mul.w r16 10000u128 into r17;
+    div.w r17 1000u128 into r18;
+    add r2 r0 into r19;
+    mul.w r1 r18 into r20;
+    div.w r20 10000u128 into r21;
+    add r19 r21 into r22;
+    mul.w r14 10000u128 into r23;
+    div.w r23 9000u128 into r24;
+    mul.w r0 r24 into r25;
+    div.w r25 10000u128 into r26;
+    add r2 r26 into r27;
+    ternary r15 r22 r27 into r28;
+    output r28 as u128.private;
 
 
-closure calculate_compounded_interest:
-    input r0 as u128;
-    input r1 as u128;
-    input r2 as u128;
+function calculate_compounded_interest:
+    input r0 as u128.private;
+    input r1 as u128.private;
+    input r2 as u128.private;
     sub r2 r1 into r3;
     mul r3 5u128 into r4;
     is.eq r4 0u128 into r5;
@@ -411,16 +413,16 @@ closure calculate_compounded_interest:
     add r30 r26 into r31;
     add r31 r27 into r32;
     ternary r5 100_000_000_000u128 r32 into r33;
-    output r33 as u128;
+    output r33 as u128.private;
 
 
-closure calculate_linear_interest:
-    input r0 as u128;
-    input r1 as u128;
-    input r2 as u128;
+function calculate_linear_interest:
+    input r0 as u128.private;
+    input r1 as u128.private;
+    input r2 as u128.private;
     sub r2 r1 into r3;
     mul r3 5u128 into r4;
     mul r0 r4 into r5;
     div r5 31536000u128 into r6;
     add 100_000_000_000u128 r6 into r7;
-    output r7 as u128;
+    output r7 as u128.private;
