@@ -1,5 +1,5 @@
-import credits.aleo;
 import stable_usd_v0_0_0.aleo;
+import credits.aleo;
 program zlend_v0_0_0.aleo;
 
 
@@ -77,6 +77,7 @@ function print_address:
     output r0 as address.private;
 
 
+
 function deposit_credits_private:
     input r0 as credits.aleo/credits.record;
     input r1 as u64.private;
@@ -96,6 +97,8 @@ finalize deposit_credits_private:
     set r3 into total_aleo[0field];
 
 
+
+
 function deposit_stable_private:
     input r0 as stable_usd_v0_0_0.aleo/token.record;
     input r1 as u64.private;
@@ -113,6 +116,8 @@ finalize deposit_stable_private:
     get.or_use total_stable[0field] 0u64 into r2;
     add r2 r1 into r3;
     set r3 into total_stable[0field];
+
+
 
 
 function withdraw_credits_private:
@@ -135,6 +140,8 @@ finalize withdraw_credits_private:
     set r3 into total_aleo[0field];
 
 
+
+
 function withdraw_stable_private:
     input r0 as ZUSD.record;
     input r1 as u64.private;
@@ -155,6 +162,8 @@ finalize withdraw_stable_private:
     set r3 into total_stable[0field];
 
 
+
+
 function add_collateral_credits:
     input r0 as ZALEO.record;
     input r1 as u64.private;
@@ -172,6 +181,8 @@ finalize add_collateral_credits:
     set r3 into collateral_aleo[r0];
 
 
+
+
 function add_collateral_stable:
     input r0 as ZUSD.record;
     input r1 as u64.private;
@@ -187,6 +198,8 @@ finalize add_collateral_stable:
     get.or_use collateral_stable[r0] 0u64 into r2;
     add r2 r1 into r3;
     set r3 into collateral_stable[r0];
+
+
 
 
 function remove_collateral_credits:
@@ -225,6 +238,8 @@ finalize remove_collateral_credits:
     set r23 into collateral_aleo[r1];
 
 
+
+
 function borrow_credits:
     input r0 as u64.private;
     call credits.aleo/transfer_public self.caller r0 into r1;
@@ -258,6 +273,8 @@ finalize borrow_credits:
     get total_aleo[0field] into r19;
     sub r19 r1 into r20;
     set r20 into total_aleo[0field];
+
+
 
 
 function borrow_stable:
@@ -295,6 +312,8 @@ finalize borrow_stable:
     set r20 into total_stable[0field];
 
 
+
+
 function repay_credits:
     input r0 as credits.aleo/credits.record;
     input r1 as u64.private;
@@ -317,6 +336,8 @@ finalize repay_credits:
     get total_aleo[0field] into r7;
     add r7 r1 into r8;
     set r8 into total_aleo[0field];
+
+
 
 
 function repay_stable:
@@ -345,16 +366,17 @@ finalize repay_stable:
 
 
 
-function calculate_interest:
-    input r0 as u128.private;
-    input r1 as u128.private;
-    input r2 as u128.private;
-    input r3 as u128.private;
-    input r4 as u128.private;
-    input r5 as u128.private;
-    input r6 as u128.private;
-    input r7 as u128.private;
-    input r8 as u128.private;
+
+closure calculate_interest:
+    input r0 as u128;
+    input r1 as u128;
+    input r2 as u128;
+    input r3 as u128;
+    input r4 as u128;
+    input r5 as u128;
+    input r6 as u128;
+    input r7 as u128;
+    input r8 as u128;
     add r5 r3 into r9;
     sub r9 r4 into r10;
     add r8 r6 into r11;
@@ -375,13 +397,13 @@ function calculate_interest:
     div.w r25 10000u128 into r26;
     add r2 r26 into r27;
     ternary r15 r22 r27 into r28;
-    output r28 as u128.private;
+    output r28 as u128;
 
 
-function calculate_compounded_interest:
-    input r0 as u128.private;
-    input r1 as u128.private;
-    input r2 as u128.private;
+closure calculate_compounded_interest:
+    input r0 as u128;
+    input r1 as u128;
+    input r2 as u128;
     sub r2 r1 into r3;
     mul r3 5u128 into r4;
     is.eq r4 0u128 into r5;
@@ -413,16 +435,16 @@ function calculate_compounded_interest:
     add r30 r26 into r31;
     add r31 r27 into r32;
     ternary r5 100_000_000_000u128 r32 into r33;
-    output r33 as u128.private;
+    output r33 as u128;
 
 
-function calculate_linear_interest:
-    input r0 as u128.private;
-    input r1 as u128.private;
-    input r2 as u128.private;
+closure calculate_linear_interest:
+    input r0 as u128;
+    input r1 as u128;
+    input r2 as u128;
     sub r2 r1 into r3;
     mul r3 5u128 into r4;
     mul r0 r4 into r5;
     div r5 31536000u128 into r6;
     add 100_000_000_000u128 r6 into r7;
-    output r7 as u128.private;
+    output r7 as u128;

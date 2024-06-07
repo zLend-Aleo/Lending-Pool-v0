@@ -1,13 +1,13 @@
 [[package]]
-name = "credits.aleo"
-location = "local"
-path = "/Users/zklim/Aleo/ZLend/program_v0/core/../credits"
-checksum = "ec877191a17e6e3ec1e8e158352cb2d1cc97be91802b954c30d341b30fff74b8"
-dependencies = []
-
-[[package]]
 name = "stable_usd_v0_0_0.aleo"
 location = "local"
 path = "/Users/zklim/Aleo/ZLend/program_v0/core/../stable_usd"
-checksum = "228977b68d036a0f2e3446f406310cb4292c40cca0681d4daaf22f75bb358f3a"
+checksum = "19bbebba8376a90eabf47f61997f0ddbd2f2146a889731c5d24e50845d059a50"
+dependencies = []
+
+[[package]]
+name = "credits.aleo"
+network = "testnet"
+location = "network"
+checksum = "a96e301bc901ca10ad7c35da423f0b1721cc30842252a098c47c1a7bd8cb2364"
 dependencies = []

@@ -1,16 +1,20 @@
 {
-    "program": "zlend_v0_0_0.aleo",
-    "version": "0.0.0",
-    "description": "",
-    "license": "MIT",
-    "dependencies": [{
-        "name": "credits.aleo",
-        "location": "local",
-        "path": "../credits"
+  "program": "zlend_v0_0_0.aleo",
+  "version": "0.0.0",
+  "description": "",
+  "license": "MIT",
+  "dependencies": [
+    {
+      "name": "stable_usd_v0_0_0.aleo",
+      "location": "local",
+      "network": null,
+      "path": "../stable_usd"
     },
     {
-        "name": "stable_usd_v0_0_0.aleo",
-        "location": "local",
-        "path": "../stable_usd"
-    }]
+      "name": "credits.aleo",
+      "location": "network",
+      "network": "testnet",
+      "path": null
+    }
+  ]
 }

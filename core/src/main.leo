@@ -50,6 +50,7 @@ program zlend_v0_0_0.aleo {
     // Always 0field key
     mapping interest_rate_slope1: field => u128;
     mapping interest_rate_slope2: field => u128;
+    // Interest rate
 
     record ZALEO {
         owner: address,
@@ -66,12 +67,12 @@ program zlend_v0_0_0.aleo {
         return a;
     }
 
-    transition deposit_credits_private(
-        input: credits.aleo/credits.record, 
+    async transition deposit_credits_private(
+        input: credits.aleo/credits, 
         amount: u64
-        ) -> (ZALEO, credits.aleo/credits.record) {
+        ) -> (ZALEO, credits.aleo/credits, Future) {
         // Balance check happened during transfer
-        let balance: credits.aleo/credits = credits.aleo/transfer_private_to_public(
+        let (balance, f): (credits.aleo/credits, Future) = credits.aleo/transfer_private_to_public(
             input, 
             aleo1n2zmmn77wd9k2lruzlvut807t09lt23xsthxepnxtk89vyw70cqq2sdaqw,  // this.address
             amount
@@ -80,20 +81,21 @@ program zlend_v0_0_0.aleo {
         return (ZALEO {
             owner: self.caller,
             amount: amount
-        }, balance) then finalize (amount);
+        }, balance, deposit_credits_private_fi(f, amount));
     }
 
-    finalize deposit_credits_private(amount: u64) {
+    async function deposit_credits_private_fi(f: Future, amount: u64) {
+        f.await();
         let prev_total: u64 = total_aleo.get_or_use(0field, 0u64);
         total_aleo.set(0field, prev_total + amount);
     }
 
-    transition deposit_stable_private(
-        input: stable_usd_v0_0_0.aleo/token.record,
+    async transition deposit_stable_private(
+        input: stable_usd_v0_0_0.aleo/token,
         amount: u64
-        ) -> (ZUSD, stable_usd_v0_0_0.aleo/token.record) {
+        ) -> (ZUSD, stable_usd_v0_0_0.aleo/token, Future) {
         // Balance check during transfer
-        let balance: stable_usd_v0_0_0.aleo/token = stable_usd_v0_0_0.aleo/transfer_private_to_public(
+        let (balance, f): (stable_usd_v0_0_0.aleo/token, Future) = stable_usd_v0_0_0.aleo/transfer_private_to_public(
             input, 
             aleo1n2zmmn77wd9k2lruzlvut807t09lt23xsthxepnxtk89vyw70cqq2sdaqw, // this.address
             amount
@@ -102,15 +104,16 @@ program zlend_v0_0_0.aleo {
         return (ZUSD {
             owner: self.caller,
             amount: amount
-        }, balance) then finalize (amount);
+        }, balance, deposit_stable_private_fi(f, amount));
     }
 
-    finalize deposit_stable_private(amount: u64) {
+    async function deposit_stable_private_fi(f: Future, amount: u64) {
+        f.await();
         let prev_total: u64 = total_stable.get_or_use(0field, 0u64);
         total_stable.set(0field, prev_total + amount);
     }
 
-    transition withdraw_credits_private(zAleo: ZALEO, amount: u64) -> (ZALEO, credits.aleo/credits.record) {
+    async transition withdraw_credits_private(zAleo: ZALEO, amount: u64) -> (ZALEO, credits.aleo/credits, Future) {
         let remaining: u64 = zAleo.amount - amount;
 
         let balance: ZALEO = ZALEO {
@@ -118,20 +121,21 @@ program zlend_v0_0_0.aleo {
             amount: remaining
         };
 
-        let send_back: credits.aleo/credits = credits.aleo/transfer_public_to_private(
+        let (send_back, f): (credits.aleo/credits, Future) = credits.aleo/transfer_public_to_private(
             self.caller,
             amount
         );
 
-        return (balance, send_back) then finalize (amount);
+        return (balance, send_back, withdraw_credits_private_fi(f, amount));
     }
 
-    finalize withdraw_credits_private(amount: u64) {
+    async function withdraw_credits_private_fi(f: Future, amount: u64) {
+        f.await();
         let prev_total: u64 = total_aleo.get(0field);
         total_aleo.set(0field, prev_total - amount);
     }
 
-    transition withdraw_stable_private(zUSD: ZUSD, amount: u64) -> (ZUSD, stable_usd_v0_0_0.aleo/token.record) {
+    async transition withdraw_stable_private(zUSD: ZUSD, amount: u64) -> (ZUSD, stable_usd_v0_0_0.aleo/token, Future) {
         let remaining: u64 = zUSD.amount - amount;
 
         let balance: ZUSD = ZUSD {
@@ -139,55 +143,56 @@ program zlend_v0_0_0.aleo {
             amount: remaining
         };
 
-        let send_back: stable_usd_v0_0_0.aleo/token = stable_usd_v0_0_0.aleo/transfer_public_to_private(
+        let (send_back, f): (stable_usd_v0_0_0.aleo/token, Future) = stable_usd_v0_0_0.aleo/transfer_public_to_private(
             self.caller,
             amount
         );
 
-        return (balance, send_back) then finalize (amount);
+        return (balance, send_back, withdraw_stable_private_fi(f, amount));
     }
 
-    finalize withdraw_stable_private(amount: u64) {
+    async function withdraw_stable_private_fi(f: Future, amount: u64) {
+        f.await();
         let prev_total: u64 = total_stable.get(0field);
         total_stable.set(0field, prev_total - amount);
     }
 
-    transition add_collateral_credits(zAleo: ZALEO, amount: u64) -> ZALEO {
+    async transition add_collateral_credits(zAleo: ZALEO, amount: u64) -> (ZALEO, Future) {
         let remaining: u64 = zAleo.amount - amount;
 
-        return ZALEO {
+        return (ZALEO {
             owner: self.caller,
             amount: remaining
-        } then finalize (self.caller, amount);
+        }, add_collateral_credits_fi(self.caller, amount));
     }
 
-    finalize add_collateral_credits(caller: address, amount: u64) {
+    async function add_collateral_credits_fi(caller: address, amount: u64) {
         let prev_balance: u64 = collateral_aleo.get_or_use(caller, 0u64);
         collateral_aleo.set(caller, prev_balance + amount);
     }
 
-    transition add_collateral_stable(zUSD: ZUSD, amount: u64) -> ZUSD {
+    async transition add_collateral_stable(zUSD: ZUSD, amount: u64) -> (ZUSD, Future) {
         let remaining: u64 = zUSD.amount - amount;
 
-        return ZUSD {
+        return (ZUSD {
             owner: self.caller,
             amount: remaining
-        } then finalize (self.caller, amount);
+        }, add_collateral_stable_fi(self.caller, amount));
     }
 
-    finalize add_collateral_stable(caller: address, amount: u64) {
+    async function add_collateral_stable_fi(caller: address, amount: u64) {
         let prev_balance: u64 = collateral_stable.get_or_use(caller, 0u64);
         collateral_stable.set(caller, prev_balance + amount);
     }
 
-    transition remove_collateral_credits(amount: u64) -> ZALEO {
-        return ZALEO {
+    async transition remove_collateral_credits(amount: u64) -> (ZALEO, Future) {
+        return (ZALEO {
             owner: self.caller,
             amount: amount
-        } then finalize(amount, self.caller);
+        }, remove_collateral_credits_fi(amount, self.caller));
     }
 
-    finalize remove_collateral_credits(amount: u64, caller: address) {
+    async function remove_collateral_credits_fi(amount: u64, caller: address) {
         // Price of Aleo $2 and price of stable $1. To be replace by external call to oracle
         // Price precision 4 decimals. To be replace by external call to oracle
         // Get collateral
@@ -213,13 +218,14 @@ program zlend_v0_0_0.aleo {
         collateral_aleo.set(caller, collateral_aleo.get(caller) - amount);
     }
 
-    transition borrow_credits(amount: u64) {
+    async transition borrow_credits(amount: u64) -> Future {
         // Transfer asset to borrower
-        credits.aleo/transfer_public(self.caller, amount);
-        return then finalize (amount, self.caller);
+        let f: Future = credits.aleo/transfer_public(self.caller, amount);
+        return borrow_credits_fi(f, amount, self.caller);
     }
 
-    finalize borrow_credits(amount: u64, caller: address) {
+    async function borrow_credits_fi(f: Future, amount: u64, caller: address) {
+        f.await();
         // Price of Aleo $2 and price of stable $1. To be replace by external call to oracle
         // Price precision 4 decimals. To be replace by external call to oracle
         let aleo_in_usd: u64 = collateral_aleo.get_or_use(caller, 0u64) * PRICE_ALEO / PRICE_PRECISION;
@@ -237,13 +243,14 @@ program zlend_v0_0_0.aleo {
         total_aleo.set(0field, total_aleo.get(0field) - amount);
     }
 
-    transition borrow_stable(amount: u64) {
+    async transition borrow_stable(amount: u64) -> Future {
         // Transfer asset to borrower
-        stable_usd_v0_0_0.aleo/transfer_public(self.caller, amount);
-        return then finalize (amount, self.caller);
+        let f: Future = stable_usd_v0_0_0.aleo/transfer_public(self.caller, amount);
+        return borrow_stable_fi(f, amount, self.caller);
     }
 
-    finalize borrow_stable(amount: u64, caller: address) {
+    async function borrow_stable_fi(f: Future, amount: u64, caller: address) {
+        f.await();
         // Price of Aleo $2 and price of stable $1. To be replace by external call to oracle
         // Price precision 4 decimals. To be replace by external call to oracle
         let aleo_in_usd: u64 = collateral_aleo.get_or_use(caller, 0u64) * PRICE_ALEO / PRICE_PRECISION;
@@ -261,19 +268,20 @@ program zlend_v0_0_0.aleo {
         total_stable.set(0field, total_stable.get(0field) - amount);
     }
 
-    transition repay_credits(
-        input: credits.aleo/credits.record,
+    async transition repay_credits(
+        input: credits.aleo/credits,
         amount: u64
-        ) -> (credits.aleo/credits.record) {
-        let balance: credits.aleo/credits = credits.aleo/transfer_private_to_public(
+        ) -> (credits.aleo/credits, Future) {
+        let (balance, f): (credits.aleo/credits, Future) = credits.aleo/transfer_private_to_public(
             input, 
             aleo1n2zmmn77wd9k2lruzlvut807t09lt23xsthxepnxtk89vyw70cqq2sdaqw, // this.address
             amount
         );
-        return balance then finalize (amount, self.caller);
+        return (balance, repay_credits_fi(f, amount, self.caller));
     }
 
-    finalize repay_credits(amount: u64, caller: address) {
+    async function repay_credits_fi(f: Future, amount: u64, caller: address) {
+        f.await();
         let current_borrow: u64 = borrowed_aleo.get(caller);
 
         // Record repaid amount and new total balance
@@ -282,19 +290,20 @@ program zlend_v0_0_0.aleo {
         total_aleo.set(0field, total_aleo.get(0field) + amount);
     }
 
-    transition repay_stable(
-        input: stable_usd_v0_0_0.aleo/token.record,
+    async transition repay_stable(
+        input: stable_usd_v0_0_0.aleo/token,
         amount: u64
-        ) -> (stable_usd_v0_0_0.aleo/token.record) {
-        let balance: stable_usd_v0_0_0.aleo/token = stable_usd_v0_0_0.aleo/transfer_private_to_public(
+        ) -> (stable_usd_v0_0_0.aleo/token, Future) {
+        let (balance, f): (stable_usd_v0_0_0.aleo/token, Future) = stable_usd_v0_0_0.aleo/transfer_private_to_public(
             input, 
             aleo1n2zmmn77wd9k2lruzlvut807t09lt23xsthxepnxtk89vyw70cqq2sdaqw, // this.address
             amount
         );
-        return balance then finalize (amount, self.caller);
+        return (balance, repay_stable_fi(f, amount, self.caller));
     }
 
-    finalize repay_stable(amount: u64, caller: address) {
+    async function repay_stable_fi(f: Future, amount: u64, caller: address) {
+        f.await();
         let current_borrow: u64 = borrowed_stable.get(caller);
 
         // Record repaid amount and new total balance
@@ -309,7 +318,10 @@ program zlend_v0_0_0.aleo {
 
     // Calculate interest rate based on utilisation rate
     // All rate should follow same precision i.e. 9 decimals
-    transition calculate_interest(
+    // 100% of slope_1 + slope_2 * excess usage if utilisation rate is above optimal usage rate
+    // else slope_1 * utilisation rate
+    // @dev Must use wrapped because of overflow, code still run and throw even `if` condition is not satisfied
+    function calculate_interest(
         slope_1: u128,
         slope_2: u128,
         base_rate: u128,
@@ -328,11 +340,6 @@ program zlend_v0_0_0.aleo {
             borrowing_reduced, 
             total_borrowing
         );
-        // return util_rate;
-        // 100% of slope_1 + slope_2 * excess usage if utilisation rate is above optimal usage rate
-        // else slope_1 * utilisation rate
-        //
-        // @dev Must use wrapped because of overflow, code still run even `if` condition is not satisfied
         if (util_rate > OPTIMAL_USAGE_RATIO) {
             let excess: u128 = ((util_rate.sub_wrapped(OPTIMAL_USAGE_RATIO)).mul_wrapped(OPTIMAL_USAGE_PRECISION)).div_wrapped(MAX_EXCESS_USAGE_RATIO);
             return base_rate + slope_1 + (slope_2.mul_wrapped(excess)).div_wrapped(OPTIMAL_USAGE_PRECISION);
@@ -360,8 +367,7 @@ program zlend_v0_0_0.aleo {
     // Compounded interest rate calculation is performed using a binomial approximation:
     //
     // (1+x)^n = 1+n*x+[n/2*(n-1)]*x^2+[n/6*(n-1)*(n-2)*x^3...
-    // 
-    transition calculate_compounded_interest(
+    function calculate_compounded_interest(
         rate: u128, // 9 decimals precision, 1% == 1_000_000_000 / 1e9
         lastBlock: u128,
         currentBlock: u128
@@ -386,7 +392,7 @@ program zlend_v0_0_0.aleo {
     }
 
     // Interest accumulated calculated using linear rate formula
-    transition calculate_linear_interest(
+    function calculate_linear_interest(
         rate: u128, // 9 decimals precision, 1% == 1_000_000_000 / 1e9
         lastBlock: u128,
         currentBlock: u128
